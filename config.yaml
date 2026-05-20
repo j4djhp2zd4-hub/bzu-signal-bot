@@ -1,0 +1,39 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# BZU Signal Bot — Конфігурація
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# OKX API Параметри
+okx:
+  instrument: "BZ-USDT-SWAP"
+  bar: "15m"
+  candle_limit: 50
+  timeout: 10
+
+# Торгові параметри
+trading:
+  balance: 5.0              # USDT баланс для розрахунку маржи
+  leverage: 20              # Плече
+  risk_percent: 0.20        # 20% від балансу на позицію
+  stop_loss_percent: 0.018  # 1.8% СЛ
+  tp1_percent: 0.030        # 3.0% TP1 (закрити 50%)
+  tp2_percent: 0.055        # 5.5% TP2 (решта)
+
+# Технічний аналіз
+analysis:
+  ema_fast: 9               # Швидка EMA
+  ema_slow: 21              # Повільна EMA
+  rsi_period: 14            # RSI період
+  rsi_min: 35               # Мінімальний RSI для входу
+  rsi_max: 60               # Максимальний RSI для входу
+  volume_mult: 1.2          # Мінімальний мультиплікатор обсягу від середнього
+
+# Сигнали
+signals:
+  send_status: true         # Надсилати статус-повідомлення без сигналів
+  status_interval_hours: 1  # Кожну годину
+  cooldown_minutes: 30      # Мінімум хвилин між сигналами одного типу
+
+# Логування
+logging:
+  level: "INFO"             # DEBUG, INFO, WARNING, ERROR
+  format: "[%(levelname)s] %(asctime)s - %(message)s"
