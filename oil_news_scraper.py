@@ -38,14 +38,107 @@ class OilNewsScraper:
                 logger.debug(f"Fetching RSS: {feed_url}")
                 feed = feedparser.parse(feed_url)
                 
-                for entry in feed.entries[:20]:  # Останні 20 статей
+                for entry in feed.entries[:20]:
                     try:
                         pub_date = datetime(*entry.published_parsed[:6])
-                        
-                        # Фільтруємо тільки статті за останню годину
                         if pub_date < one_hour_ago:
                             continue
                         
-                        # Перевіряємо чи стаття про нафту
-                        title = entry.title.lower()\n                        if any(keyword in title for keyword in ['oil', 'crude', 'energy', 'petroleum', 'gas', 'fuel', 'brent', 'wti']):\n                            articles.append({\n                                'source': 'RSS',\n                                'title': entry.title,\n                                'link': entry.link,\n                                'published': pub_date,\n                                'summary': entry.get('summary', '')[:200]\n                            })\n                    except:\n                        continue\n            except Exception as e:\n                logger.warning(f"Error fetching RSS {feed_url}: {e}")\n        
-        logger.info(f"Found {len(articles)} oil articles from RSS")\n        return articles\n    \n    def get_oilprice_news(self) -> List[Dict]:\n        """Скрейпить новини з OilPrice.com\"\"\"\n        try:\n            logger.debug("Scraping OilPrice.com")\n            response = requests.get('https://oilprice.com/', headers=self.headers, timeout=self.timeout)\n            response.raise_for_status()\n            \n            soup = BeautifulSoup(response.content, 'html.parser')\n            articles = []\n            \n            # OilPrice структура може змінюватися\n            for item in soup.find_all('article')[:15]:\n                try:\n                    title_elem = item.find('h3') or item.find('h2')\n                    link_elem = item.find('a')\n                    \n                    if title_elem and link_elem:\n                        articles.append({\n                            'source': 'OilPrice',\n                            'title': title_elem.get_text().strip(),\n                            'link': link_elem.get('href', ''),\n                            'published': datetime.now(),\n                        })\n                except:\n                    continue\n            \n            logger.info(f"Found {len(articles)} articles from OilPrice")\n            return articles\n        except Exception as e:\n            logger.warning(f"Error scraping OilPrice: {e}")\n            return []\n    \n    def get_trading_economics_news(self) -> List[Dict]:\n        """Отримує новини з Trading Economics\"\"\"\n        try:\n            logger.debug("Fetching Trading Economics energy news")\n            response = requests.get(\n                'https://tradingeconomics.com/commodities'\n                headers=self.headers, timeout=self.timeout\n            )\n            response.raise_for_status()\n            \n            soup = BeautifulSoup(response.content, 'html.parser')\n            articles = []\n            \n            # Пошук новин про енергію/нафту\n            for link in soup.find_all('a', {'href': lambda x: x and 'oil' in x.lower()})[:10]:\n                title = link.get_text().strip()\n                if title:\n                    articles.append({\n                        'source': 'Trading Economics',\n                        'title': title,\n                        'link': link.get('href', ''),\n                        'published': datetime.now(),\n                    })\n            \n            logger.info(f"Found {len(articles)} articles from Trading Economics")\n            return articles\n        except Exception as e:\n            logger.warning(f"Error fetching Trading Economics: {e}")\n            return []\n    \n    def scrape_all_news(self) -> List[Dict]:\n        \"\"\"Збирає всі новини з усіх джерел\"\"\"\n        all_news = []\n        \n        logger.info("Starting oil news scraping...")\n        \n        all_news.extend(self.get_rss_feeds())\n        all_news.extend(self.get_oilprice_news())\n        all_news.extend(self.get_trading_economics_news())\n        \n        # Видаляємо дублікати за заголовком\n        unique_news = []\n        seen_titles = set()\n        \n        for article in all_news:\n            title_lower = article['title'].lower()\n            if title_lower not in seen_titles:\n                unique_news.append(article)\n                seen_titles.add(title_lower)\n        \n        logger.info(f"Total unique articles: {len(unique_news)}\")\n        return sorted(unique_news, key=lambda x: x['published'], reverse=True)\n
+                        title = entry.title.lower()
+                        if any(keyword in title for keyword in ['oil', 'crude', 'energy', 'petroleum', 'gas', 'fuel', 'brent', 'wti']):
+                            articles.append({
+                                'source': 'RSS',
+                                'title': entry.title,
+                                'link': entry.link,
+                                'published': pub_date,
+                                'summary': entry.get('summary', '')[:200]
+                            })
+                    except:
+                        continue
+            except Exception as e:
+                logger.warning(f"Error fetching RSS {feed_url}: {e}")
+        
+        logger.info(f"Found {len(articles)} oil articles from RSS")
+        return articles
+    
+    def get_oilprice_news(self) -> List[Dict]:
+        """Скрейпить новини з OilPrice.com"""
+        try:
+            logger.debug("Scraping OilPrice.com")
+            response = requests.get('https://oilprice.com/', headers=self.headers, timeout=self.timeout)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.content, 'html.parser')
+            articles = []
+            
+            for item in soup.find_all('article')[:15]:
+                try:
+                    title_elem = item.find('h3') or item.find('h2')
+                    link_elem = item.find('a')
+                    
+                    if title_elem and link_elem:
+                        articles.append({
+                            'source': 'OilPrice',
+                            'title': title_elem.get_text().strip(),
+                            'link': link_elem.get('href', ''),
+                            'published': datetime.now(),
+                        })
+                except:
+                    continue
+            
+            logger.info(f"Found {len(articles)} articles from OilPrice")
+            return articles
+        except Exception as e:
+            logger.warning(f"Error scraping OilPrice: {e}")
+            return []
+    
+    def get_trading_economics_news(self) -> List[Dict]:
+        """Отримує новини з Trading Economics"""
+        try:
+            logger.debug("Fetching Trading Economics energy news")
+            response = requests.get(
+                'https://tradingeconomics.com/commodities',
+                headers=self.headers, timeout=self.timeout
+            )
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.content, 'html.parser')
+            articles = []
+            
+            for link in soup.find_all('a', {'href': lambda x: x and 'oil' in x.lower()})[:10]:
+                title = link.get_text().strip()
+                if title:
+                    articles.append({
+                        'source': 'Trading Economics',
+                        'title': title,
+                        'link': link.get('href', ''),
+                        'published': datetime.now(),
+                    })
+            
+            logger.info(f"Found {len(articles)} articles from Trading Economics")
+            return articles
+        except Exception as e:
+            logger.warning(f"Error fetching Trading Economics: {e}")
+            return []
+    
+    def scrape_all_news(self) -> List[Dict]:
+        """Збирає всі новини з усіх джерел"""
+        all_news = []
+        
+        logger.info("Starting oil news scraping...")
+        
+        all_news.extend(self.get_rss_feeds())
+        all_news.extend(self.get_oilprice_news())
+        all_news.extend(self.get_trading_economics_news())
+        
+        unique_news = []
+        seen_titles = set()
+        
+        for article in all_news:
+            title_lower = article['title'].lower()
+            if title_lower not in seen_titles:
+                unique_news.append(article)
+                seen_titles.add(title_lower)
+        
+        logger.info(f"Total unique articles: {len(unique_news)}")
+        return sorted(unique_news, key=lambda x: x['published'], reverse=True)
