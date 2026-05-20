@@ -1,0 +1,48 @@
+name: BZU Signal Bot
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  check-signal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pyyaml
+      
+      - name: Run signal bot
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          BALANCE: ${{ secrets.BALANCE || '5.0' }}
+          LEVERAGE: ${{ secrets.LEVERAGE || '20' }}
+          INSTRUMENT: ${{ secrets.INSTRUMENT || 'BZ-USDT-SWAP' }}
+          BAR: ${{ secrets.BAR || '15m' }}
+          EMA_FAST: ${{ secrets.EMA_FAST || '9' }}
+          EMA_SLOW: ${{ secrets.EMA_SLOW || '21' }}
+          RSI_PERIOD: ${{ secrets.RSI_PERIOD || '14' }}
+          RSI_MIN: ${{ secrets.RSI_MIN || '35' }}
+          RSI_MAX: ${{ secrets.RSI_MAX || '60' }}
+          VOLUME_MULT: ${{ secrets.VOLUME_MULT || '1.2' }}
+          RISK_PERCENT: ${{ secrets.RISK_PERCENT || '0.20' }}
+          STOP_LOSS_PERCENT: ${{ secrets.STOP_LOSS_PERCENT || '0.018' }}
+          TP1_PERCENT: ${{ secrets.TP1_PERCENT || '0.030' }}
+          TP2_PERCENT: ${{ secrets.TP2_PERCENT || '0.055' }}
+          SEND_STATUS: ${{ secrets.SEND_STATUS || 'true' }}
+          COOLDOWN_MINUTES: ${{ secrets.COOLDOWN_MINUTES || '30' }}
+        run: python bot.py
